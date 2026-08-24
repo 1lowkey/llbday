@@ -17,7 +17,10 @@
     </div>
   </main>
 
-  <main v-else class="birthday-page celebration-started">
+  <main v-else class="birthday-page celebration-started" @pointerdown="startBackgroundMusic" @keydown="startBackgroundMusic">
+    <audio ref="backgroundAudio" autoplay loop preload="auto" aria-hidden="true">
+      <source src="/Happy%20Birthday%20R%26B%20Instrumental.mp3" type="audio/mpeg">
+    </audio>
     <div class="arrival-balloons" aria-hidden="true">
       <i></i><i></i><i></i><i></i><i></i>
     </div>
@@ -30,9 +33,6 @@
         <a class="brand" href="#top"><span>02</span> birthday club</a>
         <div class="topbar-actions">
           <a class="date-chip" href="#wishes">August 25 <span>2026</span></a>
-          <button class="sound-toggle" type="button" :aria-pressed="soundOn" @click="toggleSound">
-            {{ soundOn ? 'Sound on' : 'Sound off' }} <span aria-hidden="true">{{ soundOn ? '♪' : '·' }}</span>
-          </button>
         </div>
       </nav>
 
@@ -163,8 +163,8 @@ const memories = [
 const selectedMemory = ref(null)
 const activeMemoryIndex = ref(0)
 const swipeStartX = ref(0)
-const soundOn = ref(false)
-let audioContext
+const backgroundAudio = ref(null)
+let musicStarted = false
 const currentMemory = computed(() => memories[activeMemoryIndex.value])
 
 const countdownUnits = computed(() => {
@@ -186,7 +186,7 @@ const celebrationStarted = computed(() => {
 function makeWish() {
   if (isWishing.value || messageRevealed.value) return
 
-  if (soundOn.value) playBirthdayTune()
+  startBackgroundMusic()
   isWishing.value = true
   candlesLit.value = true
   revealTimer = window.setTimeout(() => {
@@ -195,29 +195,12 @@ function makeWish() {
   }, 1200)
 }
 
-function toggleSound() {
-  soundOn.value = !soundOn.value
-  if (soundOn.value) playBirthdayTune()
-}
+function startBackgroundMusic() {
+  if (musicStarted || !celebrationStarted.value || !backgroundAudio.value) return
 
-function playBirthdayTune() {
-  audioContext ||= new window.AudioContext()
-  const start = audioContext.currentTime
-  const notes = [523.25, 659.25, 783.99, 1046.5]
-
-  notes.forEach((frequency, index) => {
-    const oscillator = audioContext.createOscillator()
-    const gain = audioContext.createGain()
-    oscillator.type = 'sine'
-    oscillator.frequency.value = frequency
-    gain.gain.setValueAtTime(0, start + index * 0.13)
-    gain.gain.linearRampToValueAtTime(0.16, start + index * 0.13 + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.001, start + index * 0.13 + 0.42)
-    oscillator.connect(gain)
-    gain.connect(audioContext.destination)
-    oscillator.start(start + index * 0.13)
-    oscillator.stop(start + index * 0.13 + 0.45)
-  })
+  musicStarted = true
+  backgroundAudio.value.volume = 0.28
+  backgroundAudio.value.play().catch(() => { musicStarted = false })
 }
 
 function showPreviousMemory() {
@@ -247,5 +230,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.clearInterval(countdownInterval)
   window.clearTimeout(revealTimer)
+  backgroundAudio.value?.pause()
 })
 </script>
